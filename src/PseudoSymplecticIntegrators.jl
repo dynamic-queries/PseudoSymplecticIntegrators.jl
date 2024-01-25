@@ -1,5 +1,9 @@
 module PseudoSymplecticIntegrators
-
-# Write your package code here.
-
+    using SparseArrays
+    using UnPack
+    
+    include("algorithms.jl")
+    export AubChar
+    
+    include("iterator.jl")
 end
