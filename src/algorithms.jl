@@ -54,7 +54,44 @@ function AubCharTableau(type::Type)
     return AubCharTableau(A,B,C)
 end
 
-function perform_step(ui, ti, p, f, solver::AubChar)
+function perform_step(ui, ti, p, f::SimpleFunction, solver::AubChar)
     @unpack dt, tableau, nstages = solver
-    k1 = f()
+    @unpack A,b,c = tableau
+    k1 = f.f(ui,p,t)
+    k2 = f.f(ui + dt*A[2,1]*k1,p,t+c[2]*dt)
+    k3 = f.f(ui + dt*(A[3,1]*k1 + A[3,2]*k2),p,t+c[3]*dt)
+    k4 = f.f(ui + dt*(A[4,1]*k1 + A[4,2]*k2 + A[4,3]*k3),p,t+c[4]*dt)
+    k5 = f.f(ui + dt*(A[5,1]*k1 + A[5,2]*k2 + A[5,3]*k3 + A[5,4]*k4),p,t+c[5]*dt)
+    ui1 = b[1]*k1 + b[2]*k2 + b[3]*k3 + b[4]*k4 + b[5]*k5
+    return ui1
+end
+
+function split(v::Vector)
+    n = length(v)
+    l = floor(Int,n/2)
+    v[1:l], v[l+1:end]
+end
+
+function split(m::Matrix)
+    n = size(m,1)
+    l = floor(Int, n/2)
+    m[1:l,:], m[l+1:end,:]
 end 
+
+function perform_step(ui, ti, p, f::PartionedFunction, solver::AubChar)
+    @unpack dt, tableau, nstages = solver
+    @unpack A,b,c = tableau
+    
+    function g(x,t)
+        y,z = split(x)
+        vcat(f.f1(y,p,t), f.f2(z,p,t))
+    end 
+    
+    k1 = g(ui,t+c[1]*dt)
+    k2 = g(ui + dt*(A[2,1]*k1),t+c[2]*dt)
+    k3 = f.g(ui + dt*(A[3,1]*k1 + A[3,2]*k2),t+c[3]*dt)
+    k4 = f.g(ui + dt*(A[4,1]*k1 + A[4,2]*k2 + A[4,3]*k3),t+c[4]*dt)
+    k5 = f.g(ui + dt*(A[5,1]*k1 + A[5,2]*k2 + A[5,3]*k3 + A[5,4]*k4),t+c[5]*dt)
+    ui1 = b[1]*k1 + b[2]*k2 + b[3]*k3 + b[4]*k4 + b[5]*k5
+    return ui1
+end
